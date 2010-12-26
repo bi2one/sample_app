@@ -8,3 +8,6 @@ module ApplicationHelper
     end
   end
 end
+
+
+cp -r ~/Downloads/joshuaclayton-blueprint-css-<version number>/blueprint \> public/stylesheets/
