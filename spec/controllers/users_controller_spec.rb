@@ -64,6 +64,18 @@ describe UsersController do
       get :new
       response.should have_selector("input[name='user[password_confirmation]'][type='password']")
     end
+
+    describe "for signed-in user" do
+      before(:each) do
+        @user = Factory(:user)
+        test_sign_in(@user)
+      end
+
+      it "should redirect to root page" do
+        get :new
+        response.should redirect_to(root_path)
+      end
+    end
   end
 
   describe "POST 'create'" do
@@ -110,6 +122,18 @@ describe UsersController do
       it "should have a welcome message" do
         post :create, :user => @attr
         flash[:success].should =~ /welcome to the sample app/i
+      end
+    end
+
+    describe "for signed-in user" do
+      before(:each) do
+        @user = Factory(:user)
+        test_sign_in(@user)
+      end
+      
+      it "should redirect to root page" do
+        post :create
+        response.should redirect_to(root_path)
       end
     end
   end
@@ -269,6 +293,49 @@ describe UsersController do
                                            :content => "Next")
       end
     end
+
+    describe "as an admin user" do
+      before(:each) do
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(@admin)
+
+        @user = Factory(:user)
+        second = Factory(:user, :email => "another@example.com")
+        third  = Factory(:user, :email => "another@example.net")
+
+        @users = [@user, second, third]
+      end
+
+      describe "should not appear delete link" do
+        it "of themselves" do
+          get :index
+          response.should_not have_selector("a", :href => "/users/#{@admin.id}", :content => "delete")
+        end
+      end
+
+      it "should appear delete link" do
+        get :index
+        @users.each do |user|
+          response.should have_selector("a", :href => "/users/#{user.id}", :content => "delete")
+        end
+      end
+    end
+
+    describe "as a non-admin user" do
+      before(:each) do
+        @user = test_sign_in(Factory(:user))
+        second = Factory(:user, :email => "another@example.com")
+        third  = Factory(:user, :email => "another@example.net")
+        @users = [@user, second, third]
+      end
+
+      it "should not appear delete link" do
+        get :index
+        @users[1..2].each do |user|
+          response.should_not have_selector("a", :href => "/users/#{user.id}", :content => "delete")
+        end
+      end
+    end
   end
 
   describe "DELETE 'destroy'" do
@@ -293,8 +360,8 @@ describe UsersController do
 
     describe "as an admin user" do
       before(:each) do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(@admin)
       end
 
       it "should destroy the user" do
@@ -306,6 +373,19 @@ describe UsersController do
       it "should redirect to the users page" do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
+      end
+
+      it "should not destroy themselves" do
+        lambda do
+          delete :destroy, :id => @admin
+        end.should_not change(User, :count)
+      end
+
+      describe "should redirect to root page" do
+        it "when destroy themselves" do
+          delete :destroy, :id => @admin
+          response.should redirect_to(root_path)
+        end
       end
     end
   end
