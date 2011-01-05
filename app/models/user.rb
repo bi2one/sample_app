@@ -16,6 +16,8 @@ class User < ActiveRecord::Base
   attr_accessor :password
   attr_accessible :name, :email, :password, :password_confirmation
 
+  has_many :microposts, :dependent => :destroy
+
   # \A: match the expression only against the start of the target string, not lines within it.(start)
   # \z: match the expression only against the end of the target string.(end)
   # i : If you wanted to ignore case entirely in your search, you could also use the i modifier.(대소문자 구분 x)
@@ -39,6 +41,11 @@ class User < ActiveRecord::Base
 
   def has_password?(submitted_password)
     encrypted_password == encrypt(submitted_password)
+  end
+
+  def feed
+    # This is preliminary. See Chapter 12 for the full implementation
+    Micropost.where("user_id = ?", id)
   end
 
   def self.authenticate(email, submitted_password)
